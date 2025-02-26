@@ -1,59 +1,64 @@
 var test = require('tape')
 ,app = require('../')
 
-test('explodeAddress',function(t){
-	var tests = [
-		{
-			desc: 'basic worky'
-			,input: '1842 W Washington Blvd, Los Angeles, CA 90007'
-			,expected: {
-				street_address1: '1842 W Washington Blvd'
-				,city: 'Los Angeles'
-				,state: 'CA'
-				,postal_code: '90007'
-				,country: null
-			}
+test('parseAddress',function(t){
+    var tests = [
+	{
+	    desc: 'basic worky'
+	    ,input: '1842 W Washington Blvd, Los Angeles, CA 90007'
+	    ,expected: {
+		line1: '1842 W Washington Blvd',
+		line2: null
+		,city: 'Los Angeles'
+		,province: 'CA'
+		,postal_code: '90007'
+		,country: null
+	    }
+	}
+	,{
+	    desc: 'street address looks like a zip code'
+	    ,input: '90007 W Washington Blvd, Santa Monica, California 90007'
+	    ,expected: {
+		line1: '90007 W Washington Blvd',
+		line2: null
+		,city: 'Santa Monica'
+		,province: 'California'
+		,postal_code: '90007'
+		,country: null
+	    }
+	}
+	,{
+	    desc: 'street address is just words'
+	    ,input: 'Trousdale Parkway, Los Angeles, California'
+	    ,expected: {
+		line1: 'Trousdale Parkway'
+		,line2: null
+		,city: 'Los Angeles'
+		,province: 'California'
+		,postal_code: null
+		,country: null
+	    }
+	}
+	,{
+	    desc: 'province and city have the same name'
+	    ,input: '1201 Broadway, New York, New York 10001'
+	    ,expected: {
+		line1: '1201 Broadway'
+		,line2: null
+		,city: 'New York'
+		,province: 'New York'
+		,postal_code: '10001'
+		,country: null
+	    }
 		}
 		,{
-			desc: 'street address looks like a zip code'
-			,input: '90007 W Washington Blvd, Santa Monica, California 90007'
-			,expected: {
-				street_address1: '90007 W Washington Blvd'
-				,city: 'Santa Monica'
-				,state: 'California'
-				,postal_code: '90007'
-				,country: null
-			}
-		}
-		,{
-			desc: 'street address is just words'
-			,input: 'Trousdale Parkway, Los Angeles, California'
-			,expected: {
-				street_address1: 'Trousdale Parkway'
-				,city: 'Los Angeles'
-				,state: 'California'
-				,postal_code: null
-				,country: null
-			}
-		}
-		,{
-			desc: 'state and city have the same name'
-			,input: '1201 Broadway, New York, New York 10001'
-			,expected: {
-				street_address1: '1201 Broadway'
-				,city: 'New York'
-				,state: 'New York'
-				,postal_code: '10001'
-				,country: null
-			}
-		}
-		,{
-			desc: 'state with two names spelled out'
+			desc: 'province with two names spelled out'
 			,input: '306 Deep Creek Rd, Fayetteville, North Carolina 28312'
 			,expected: {
-				street_address1: '306 Deep Creek Rd'
+				line1: '306 Deep Creek Rd'
+		,line2: null
 				,city: 'Fayetteville'
-				,state: 'North Carolina'
+				,province: 'North Carolina'
 				,postal_code: '28312'
 				,country: null
 			}
@@ -62,9 +67,10 @@ test('explodeAddress',function(t){
 			desc: 'country is appended with comma'
 			,input: '1842 W Washington Blvd, Los Angeles, CA 90007, US'
 			,expected: {
-				street_address1: '1842 W Washington Blvd'
+				line1: '1842 W Washington Blvd'
+		,line2: null
 				,city: 'Los Angeles'
-				,state: 'CA'
+				,province: 'CA'
 				,postal_code: '90007'
 				,country: 'US'
 			}
@@ -73,9 +79,10 @@ test('explodeAddress',function(t){
 			desc: 'country is appended without comma'
 			,input: '1842 W Washington Blvd, Los Angeles, CA 90007 USA'
 			,expected: {
-				street_address1: '1842 W Washington Blvd'
+				line1: '1842 W Washington Blvd'
+		,line2: null
 				,city: 'Los Angeles'
-				,state: 'CA'
+				,province: 'CA'
 				,postal_code: '90007'
 				,country: 'USA'
 			}
@@ -84,9 +91,10 @@ test('explodeAddress',function(t){
 			desc: 'canada'
 			,input: '646 Union Ave E, Winnipeg, MB R2L 1A4, CA'
 			,expected: {
-				street_address1: '646 Union Ave E'
+				line1: '646 Union Ave E'
+		,line2: null
 				,city: 'Winnipeg'
-				,state: 'MB'
+				,province: 'MB'
 				,postal_code: 'R2L 1A4'
 				,country: 'CA'
 			}
@@ -95,20 +103,22 @@ test('explodeAddress',function(t){
 			desc: 'canada - no country indicator'
 			,input: '229 Begin St W, Thunder Bay, ON P7E 5M5'
 			,expected: {
-				street_address1: '229 Begin St W'
+				line1: '229 Begin St W'
+		,line2: null
 				,city: 'Thunder Bay'
-				,state: 'ON'
+				,province: 'ON'
 				,postal_code: 'P7E 5M5'
 				,country: null
 			}
 		}
 		,{
-			desc: 'street address + city + state only (no postal code)'
+			desc: 'street address + city + province only (no postal code)'
 			,input: '3300-3332 Glen Koester Ln, Idaho Falls, ID'
 			,expected: {
-				street_address1: '3300-3332 Glen Koester Ln'
+				line1: '3300-3332 Glen Koester Ln'
+		,line2: null
 				,city: 'Idaho Falls'
-				,state: 'ID'
+				,province: 'ID'
 				,postal_code: null
 				,country: null
 			}
@@ -117,9 +127,10 @@ test('explodeAddress',function(t){
 			desc: 'street address + city only'
 			,input: '757 Juntura-Riverside Rd, Riverside'
 			,expected: {
-				street_address1: '757 Juntura-Riverside Rd'
+				line1: '757 Juntura-Riverside Rd'
+		,line2: null
 				,city: 'Riverside'
-				,state: null
+				,province: null
 				,postal_code: null
 				,country: null
 			}
@@ -128,9 +139,10 @@ test('explodeAddress',function(t){
 			desc: 'street address + postal code only'
 			,input: '1813 Linda Vista Cir, 92831'
 			,expected: {
-				street_address1: '1813 Linda Vista Cir'
+				line1: '1813 Linda Vista Cir'
+		,line2: null
 				,city: null
-				,state: null
+				,province: null
 				,postal_code: '92831'
 				,country: null
 			}
@@ -139,9 +151,10 @@ test('explodeAddress',function(t){
 			desc: 'street address only'
 			,input: '145 Parkway Ave'
 			,expected: {
-				street_address1: '145 Parkway Ave'
+				line1: '145 Parkway Ave'
+		,line2: null
 				,city:  null
-				,state: null
+				,province: null
 				,postal_code: null
 				,country: null
 			}
@@ -150,20 +163,22 @@ test('explodeAddress',function(t){
 			desc: 'city only'
 			,input: 'Los Angeles'
 			,expected: {
-				street_address1: null
+				line1: null
+		,line2: null
 				,city:  'Los Angeles'
-				,state: null
+				,province: null
 				,postal_code: null
 				,country: null
 			}
 		}
 		,{
-			desc: 'state only'
+			desc: 'province only'
 			,input: 'NJ'
 			,expected: {
-				street_address1: null
+				line1: null
+		,line2: null
 				,city:  null
-				,state: 'NJ'
+				,province: 'NJ'
 				,postal_code: null
 				,country: null
 			}
@@ -172,9 +187,10 @@ test('explodeAddress',function(t){
 			desc: 'postal code only'
 			,input: '13820'
 			,expected: {
-				street_address1: null
+				line1: null
+		,line2: null
 				,city:  null
-				,state: null
+				,province: null
 				,postal_code: '13820'
 				,country: null
 			}
@@ -183,9 +199,10 @@ test('explodeAddress',function(t){
 			desc: 'country only'
 			,input: 'United States'
 			,expected: {
-				street_address1: null
+				line1: null
+		,line2: null
 				,city:  null
-				,state: null
+				,province: null
 				,postal_code: null
 				,country: 'United States'
 			}
@@ -194,9 +211,10 @@ test('explodeAddress',function(t){
 			desc: 'empty'
 			,input: '  '
 			,expected: {
-				street_address1: null
+				line1: null
+		,line2: null
 				,city:  null
-				,state: null
+				,province: null
 				,postal_code: null
 				,country: null
 			}
@@ -205,9 +223,10 @@ test('explodeAddress',function(t){
 			desc: 'invalid input'
 			,input: {}
 			,expected: {
-				street_address1: null
+				line1: null
+		,line2: null
 				,city:  null
-				,state: null
+				,province: null
 				,postal_code: null
 				,country: null
 			}
@@ -216,23 +235,25 @@ test('explodeAddress',function(t){
 
 	t.plan(tests.length)
 
-	tests.forEach(function(test){
-		app(test.input,function(err,addressObj){
-			if (JSON.stringify(addressObj) != JSON.stringify(test.expected)) console.log(test.desc,'addressObj != test.expected',addressObj,'!=',JSON.stringify(test.expected))
-			t.ok(JSON.stringify(addressObj) == JSON.stringify(test.expected), test.desc)
-		})
-	})
+    tests.forEach(function(test){
+	
+	const address = app(test.input)
+	if (JSON.stringify(address) != JSON.stringify(test.expected)) {
+	    console.log(test.desc,'address != test.expected', JSON.stringify(address), address,'!=',JSON.stringify(test.expected))
+	}
+	t.ok(JSON.stringify(address) == JSON.stringify(test.expected), test.desc)
+    })
 })
 
-test('implodeAddress',function(t){
+test('printAddress',function(t){
 	var tests = [
 		{
 			desc: 'basic worky'
 			,input: {
-				street_address1: '1842 W Washington Blvd'
-				,street_address2: ''
+				line1: '1842 W Washington Blvd'
+				,line2: ''
 				,city: 'Los Angeles'
-				,state: 'CA'
+				,province: 'CA'
 				,postal_code: '90007'
 				,country: null
 			}
@@ -241,22 +262,22 @@ test('implodeAddress',function(t){
 		,{
 			desc: 'has country'
 			,input: {
-				street_address1: '1842 W Washington Blvd'
-				,street_address2: ''
+				line1: '1842 W Washington Blvd'
+				,line2: ''
 				,city: 'Los Angeles'
-				,state: 'CA'
+				,province: 'CA'
 				,postal_code: '90007'
 				,country: 'US'
 			}
 			,expected: '1842 W Washington Blvd, Los Angeles, CA 90007, US'
 		}
 		,{
-			desc: 'has street_address2'
+			desc: 'has line2'
 			,input: {
-				street_address1: '1842 W Washington Blvd'
-				,street_address2: 'Ste 300'
+				line1: '1842 W Washington Blvd'
+				,line2: 'Ste 300'
 				,city: 'Los Angeles'
-				,state: 'CA'
+				,province: 'CA'
 				,postal_code: '90007'
 				,country: null
 			}
@@ -272,9 +293,8 @@ test('implodeAddress',function(t){
 	t.plan(tests.length)
 
 	tests.forEach(function(test){
-		app.implodeAddress(test.input,function(err,addressStr){
-			t.ok(addressStr == test.expected, test.desc)
-		})
+	    const str = app.printAddress(test.input)
+	    t.ok(str == test.expected, test.desc)
 	})
 })
 

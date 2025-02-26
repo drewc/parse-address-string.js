@@ -1,0 +1,258 @@
+#+TITLE: parse-address-string.js
+
+Extract street (line1, line2), city, province, postal code, and
+country components from a single-line address string.
+
+While there are more distinct methods available, like =libpostal= for
+example, for the most part such distictions are not needed.
+
+
+* Example
+:PROPERTIES:
+:CUSTOM_ID: example
+:END:
+
+#+begin_src javascript
+  const parseAddress = require('parse-address-string.js'),
+        address = parseAddress('4296 W 7th St, Long Beach, CA 90802')
+
+  console.log('Street: ', address.line1)
+  console.log('City: ', address.city)
+  console.log('Province: ', address.province)
+  console.log('Postal Code: ', address.postal_code)
+  console.log('Country: ', address.country)
+#+end_src
+
+* Notes
+:PROPERTIES:
+:CUSTOM_ID: notes
+:END:
+- This version currently targets the USA and Canada
+  - Many other North American and European countries follow the same
+    standard but are not, yet, explicitly supported.
+  - Updating =lib/*.json= will get 90% of the way there.
+
+* Api
+:PROPERTIES:
+:CUSTOM_ID: api
+:END:
+** parseAddress( addressString)
+:PROPERTIES:
+:CUSTOM_ID: parseaddress-addressstring-callback-
+:END:
+=addressString= =>  =address=
+
+The =address= has string or NULL properties =line1=, =line2=, =city=,
+  =province=, =postal_code=, =country=
+
+** parseAddress.parseAddress( addressString )
+:PROPERTIES:
+:CUSTOM_ID: parseaddressexplodeaddress-addressstring-callback-
+:END:
+Same as =parseAddress()=
+
+** parseAddress.printAddress( address )
+:PROPERTIES:
+:CUSTOM_ID: parseaddressimplodeaddress-addressobject-callback
+:END:
+Inverse of =parseAddress=: =address= *=>* =string=
+
+  - =address= - Object with some properties =line1=, =line2=, =city=,
+    =province=, =postal_code=, =country=
+    
+  - =string= Follows inline US/CA address format standard: Line1
+    Line2, City, Province PostalCode, Country
+
+* Test Cases
+:PROPERTIES:
+:CUSTOM_ID: test-cases
+:END:
+See =test/test.js= for more
+
+#+begin_example
+// Street address looks like a zip code
+parseAddress('90007 W Washington Blvd, Santa Monica, California 90007')
+=> {
+    line1: '90007 W Washington Blvd',
+    city: 'Santa Monica',
+    province: 'California',
+    postal_code: '90007',
+    country: null
+}
+
+// Province with two names spelled out
+parseAddress('306 Deep Creek Rd, Fayetteville, North Carolina 28312')
+=> {
+    line1: '306 Deep Creek Rd',
+    city: 'Fayetteville',
+    province: 'North Carolina',
+    postal_code: '28312',
+    country: null
+}
+
+// Country is appended with comma
+parseAddress('1842 W Washington Blvd, Los Angeles, CA 90007, US')
+=> {
+    line1: '1842 W Washington Blvd',
+    city: 'Los Angeles',
+    province: 'CA',
+    postal_code: '90007',
+    country: 'US'
+}
+
+// Country is appended without comma
+parseAddress('1842 W Washington Blvd, Los Angeles, CA 90007 USA')
+=> {
+    line1: '1842 W Washington Blvd',
+    city: 'Los Angeles',
+    province: 'CA',
+    postal_code: '90007',
+    country: 'USA'
+}
+
+// Canada
+parseAddress('646 Union Ave E, Winnipeg, MB R2L 1A4, Canada')
+=> {
+    line1: '646 Union Ave E',
+    city: 'Winnipeg',
+    province: 'MB',
+    postal_code: 'R2L 1A4',
+    country: 'Canada'
+}
+
+// Canada - no country indicator
+parseAddress('229 Begin St W, Thunder Bay, ON P7E 5M5')
+=> {
+    line1: '229 Begin St W',
+    city: 'Thunder Bay',
+    province: 'ON',
+    postal_code: 'P7E 5M5',
+    country: null
+}
+
+// Street address + city + province only (no postal code)
+parseAddress('3300-3332 Glen Koester Ln, Idaho Falls, ID')
+=> {
+    line1: '3300-3332 Glen Koester Ln',
+    city: 'Idaho Falls',
+    province: 'ID',
+    postal_code: null,
+    country: null
+}
+
+// Street address + city only
+parseAddress('757 Juntura-Riverside Rd, Riverside')
+=> {
+    line1: '757 Juntura-Riverside Rd',
+    city: 'Riverside',
+    province: null,
+    postal_code: null,
+    country: null
+}
+
+// Street address + postal code only
+parseAddress('1813 Linda Vista Cir, 92831')
+=> {
+    line1: '1813 Linda Vista Cir',
+    city: null,
+    province: null,
+    postal_code: '92831',
+    country: null
+}
+
+// Street address only
+parseAddress('145 Parkway Ave')
+=> {
+    line1: '145 Parkway Ave',
+    city:  null,
+    province: null,
+    postal_code: null,
+    country: null
+}
+
+// City only
+parseAddress('Los Angeles')
+=> {
+    line1: null,
+    city:  'Los Angeles',
+    province: null,
+    postal_code: null,
+    country: null
+}
+
+// Province only
+parseAddress('NJ')
+=> {
+    line1: null,
+    city:  null,
+    province: 'NJ',
+    postal_code: null,
+    country: null
+}
+
+// Postal code only
+parseAddress('13820')
+=> {
+    line1: null,
+    city:  null,
+    province: null,
+    postal_code: '13820',
+    country: null
+}
+
+// Country only
+parseAddress('United States')
+=> {
+    line1: null,
+    city:  null,
+    province: null,
+    postal_code: null,
+    country: 'United States'
+}
+#+end_example
+
+* CHANGELOG
+
+** 0.9.0 (2025-02-26)
+
+Features:
+
+ - Changed =state= to =province=
+ - Removed the callback
+ - Changed =street_address(1|2)= into =line(1|2)=
+ - Added the "line2" parsing. This fixes a bug where line2 became the city.
+
+Updates:
+
+This is when =drewc= became the BDFL.
+
+** 0.0.3 (2017-05-12)
+:PROPERTIES:
+:CUSTOM_ID: 003-2017-05-12
+:END:
+Features
+
+#+begin_example
+- Handle special case: Neighborhood, City, State
+#+end_example
+
+** 0.0.2 (2017-05-09)
+:PROPERTIES:
+:CUSTOM_ID: 002-2017-05-09
+:END:
+Bugs
+
+#+begin_example
+- Handle case where city and state have same name (e.g. New York, New York)
+#+end_example
+
+** 0.0.1 (2016-12-21)
+:PROPERTIES:
+:CUSTOM_ID: 001-2016-12-21
+:END:
+Features
+
+#+begin_example
+- No changes, bumped to 0.0.1 after vetting in real-life apps
+#+end_example
+

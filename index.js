@@ -1,125 +1,132 @@
 
-module.exports = explodeAddress
-module.exports.explodeAddress = explodeAddress
-module.exports.implodeAddress = implodeAddress
+module.exports = parseAddress
+module.exports.parseAddress = parseAddress
+module.exports.printAddress = printAddress
 
 
-function explodeAddress(singleLineAddress,cb){
-	process.nextTick(function(){
-		var addressObj = {
-			street_address1: null
-			,city: null
-			,state: null
-			,postal_code: null
-			,country: null
-		}
-		if (typeof singleLineAddress != 'string') {
-			//return cb(new Error('Input must be a String'))
-			return cb(false,addressObj)
-		}
-		singleLineAddress = singleLineAddress.trim()
+function parseAddress(str){
+    var address = {
+	line1: null,
+	line2: null,
+	city: null,
+	province: null,
+	postal_code: null,
+	country: null 
+    }
+    if (typeof str != 'string') {
+	//return cb(new Error('Input must be a String'))
+	return address
+    }
+    str = str.trim()
+    
+    var postalCode = str.match(/([0-9]{5})|([a-z][0-9][a-z] ?[0-9][a-z][0-9])/gi)
+    ,indexOfPostalCode = -1
 
-		var postalCode = singleLineAddress.match(/([0-9]{5})|([a-z][0-9][a-z] ?[0-9][a-z][0-9])/gi)
-			,indexOfPostalCode = -1
-		if (postalCode) {
-			postalCode = postalCode.pop() // pick match closest to end
-			indexOfPostalCode = singleLineAddress.lastIndexOf(postalCode)
-			if (indexOfPostalCode == 0 && singleLineAddress.length > 10) {
-				// postal code is probably part of street address
-				postalCode = null
-				indexOfPostalCode = -1
-			}
-			if (postalCode) {
-				addressObj.postal_code = postalCode
-				var everythingAfterPostalCode = singleLineAddress.substr(indexOfPostalCode+postalCode.length)
-				singleLineAddress = singleLineAddress.substr(0,indexOfPostalCode)+everythingAfterPostalCode
-				var possibleCountry = everythingAfterPostalCode.replace(/\s*,/,'').split(',').shift().trim()
-				if (possibleCountry && looksLikeCountry(possibleCountry)) {
-					addressObj.country = possibleCountry
-					singleLineAddress = singleLineAddress.substr(0,indexOfPostalCode) // just ditch everything after postal + country
-				}
-			}
-		}
+    if (postalCode) {
+	postalCode = postalCode.pop() // pick match closest to end
+	indexOfPostalCode = str.lastIndexOf(postalCode)
+	if (indexOfPostalCode == 0 && str.length > 10) {
+	    // postal code is probably part of street address
+	    postalCode = null
+	    indexOfPostalCode = -1
+	}
+	if (postalCode) {
+	    address.postal_code = postalCode
+	    var everythingAfterPostalCode = str.substr(indexOfPostalCode+postalCode.length)
+	    str = str.substr(0,indexOfPostalCode)+everythingAfterPostalCode
+	    var possibleCountry = everythingAfterPostalCode.replace(/\s*,/,'').split(',').shift().trim()
+	    if (possibleCountry && looksLikeCountry(possibleCountry)) {
+		address.country = possibleCountry
+		str = str.substr(0,indexOfPostalCode) // just ditch everything after postal + country
+	    }
+	}
+    }
 
-		var addySplit = singleLineAddress.split(',')
+    var addySplit = str.split(',')
 
-		// Handle special cases...
-		// Neighborhood, City, State
-		if (addySplit.length == 3 && looksLikeState(addySplit[2])) {
-			addressObj.street_address1 = addySplit[0].trim()
-			addressObj.city = addySplit[1].trim()
-			addressObj.state = addySplit[2].trim()
-			return cb(false,addressObj)
-		}
+    // Handle special cases...
+    // Neighborhood, City, Province
+    if (addySplit.length == 3 && looksLikeProvince(addySplit[2])) {
+	address.line1 = addySplit[0].trim()
+	address.city = addySplit[1].trim()
+	address.province = addySplit[2].trim()
+	return address
+    }
 
-		// Handle generic case...
-		addySplit.forEach(function(addyPart){
-			if (!(addyPart = addyPart.trim())) return
-			// if has numbers, assume street address
-			if (/[0-9]/.test(addyPart)) {
-				return !addressObj.street_address1 && (addressObj.street_address1 = addyPart)
-			}
-			// if looks like state
-			if (looksLikeState(addyPart) && !addressObj.state) {
-				return addressObj.state = addyPart
-			}
-			// if looks like country
-			if (looksLikeCountry(addyPart)) {
-				return !addressObj.country && (addressObj.country = addyPart)
-			}
-			// else assume city
-			!addressObj.city && (addressObj.city = addyPart)
-		})
+    // Handle generic case...
+    addySplit.forEach(function(addyPart){
+	if (!(addyPart = addyPart.trim())) return
+	// if has numbers, assume street address
+	if (/[0-9]/.test(addyPart)) {
+	    return !address.line1 && (address.line1 = addyPart)
+	}
+	// if looks like province
+	if (looksLikeProvince(addyPart) && !address.province) {
+	    return address.province = addyPart
+	}
+	// if looks like country
+	if (looksLikeCountry(addyPart)) {
+	    return !address.country && (address.country = addyPart)
+	}
 
-		cb(false,addressObj)
-	})
+	// if we've set a city then this is actually the city and the
+	// city is actually line2
+	if (address.city && !address.line2) {
+	    address.line2 = address.city;
+	    
+	    return address.city = addyPart
+	}
+	
+	// else assume city
+	!address.city && (address.city = addyPart)
+    })
+
+    return address
+
 }
 
-function implodeAddress(addressObj,cb){
-	process.nextTick(function(){
-		if (addressObj === null || typeof addressObj != 'object') {
-			//return cb(new Error('Input must be an Object'))
-			return cb(false, '')
-		}
-		var addyParts = []
-			,addyPart
-		if (typeof addressObj.street_address1 == 'string' && (addyPart = addressObj.street_address1.trim())) {
-			addyParts[0] = addyPart
-			if (typeof addressObj.street_address2 == 'string' && (addyPart = addressObj.street_address2.trim())) {
-				addyParts[0] += ' '+addyPart
-			}
-		}
-		['city','state'].forEach(function(addyKey){
-			if (typeof addressObj[addyKey] == 'string' && (addyPart = addressObj[addyKey].trim())) {
-				addyParts.push(addyPart)
-			}
-		})
-		var singleLineAddress = addyParts.join(', ')
-		if (typeof addressObj.postal_code == 'string' && (addyPart = addressObj.postal_code.trim())) {
-			singleLineAddress += ' '+addyPart
-			singleLineAddress = singleLineAddress.trim()
-		}
-		if (typeof addressObj.country == 'string' && (addyPart = addressObj.country.trim())) {
-			singleLineAddress += singleLineAddress ? ', '+addyPart : addyPart
-		}
-		cb(false,singleLineAddress)
-	})
+function printAddress(address){
+    if (address === null || typeof address != 'object') {
+	return false
+    }
+    var addyParts = []
+    ,addyPart
+    if (typeof address.line1 == 'string' && (addyPart = address.line1.trim())) {
+	addyParts[0] = addyPart
+	if (typeof address.line2 == 'string' && (addyPart = address.line2.trim())) {
+	    addyParts[0] += ' '+addyPart
+	}
+    }
+    ['city','province'].forEach(function(addyKey){
+	if (typeof address[addyKey] == 'string' && (addyPart = address[addyKey].trim())) {
+	    addyParts.push(addyPart)
+	}
+    })
+    var str = addyParts.join(', ')
+    if (typeof address.postal_code == 'string' && (addyPart = address.postal_code.trim())) {
+	str += ' '+addyPart
+	str = str.trim()
+    }
+    if (typeof address.country == 'string' && (addyPart = address.country.trim())) {
+	str += str ? ', '+addyPart : addyPart
+    }
+    return str
 }
 
-var states
-function looksLikeState(str){
-	if (!states) {
+var provinces
+function looksLikeProvince(str){
+	if (!provinces) {
 		var map = require('./lib/states.json')
-		states = {}
+		provinces = {}
 		for (var k in map) {
 			if (map.hasOwnProperty(k)){
-				states[k.toLowerCase()] = true
-				states[map[k].toLowerCase()] = true
+				provinces[k.toLowerCase()] = true
+				provinces[map[k].toLowerCase()] = true
 			}
 		}
 	}
 	str = str.trim().toLowerCase()
-	return !!states[str]
+	return !!provinces[str]
 }
 
 var countries
