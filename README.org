@@ -1,5 +1,7 @@
 #+TITLE: parse-address-string.js
 
+[[https://github.com/drewc/parse-address-string.js/actions][file:https://github.com/drewc/parse-address-string.js/actions/workflows/node.js.yml/badge.svg]]
+
 Extract street (line1, line2), city, province, postal code, and
 country components from a single-line address string.
 
