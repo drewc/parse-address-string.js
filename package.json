@@ -1,5 +1,5 @@
 {
-	"name": "parse-address-string",
+	"name": "parse-address-string.js",
 	"version": "0.9.0",
 	"description": "Extract street, city, province, postal code, and country components from single-line address string",
 	"keywords": [
